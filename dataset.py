@@ -7,11 +7,12 @@ def load_split(
     max_samples: int | None = None,
     img_size: tuple[int, int] = (32, 32),
     margin_ratio: float = 0.05,
+    streaming: bool = True
 ):
     """
     load a split and return (x, y) for classification
     """
-    ds = load_dataset("whirlwind-ams/hslvision", split=split_name, streaming=True)
+    ds = load_dataset("whirlwind-ams/hslvision", split=split_name, streaming=streaming)
 
     # check the dimension
     if max_samples is not None:
