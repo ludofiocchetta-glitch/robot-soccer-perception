@@ -1,4 +1,4 @@
-from datasets import load_dataset
+from datasets import load_dataset, load_dataset_builder
 import numpy as np
 from PIL import Image
 
@@ -51,6 +51,14 @@ def load_split(
 
     return np.array(x_crops), np.array(y_labels)
 
+def get_class_names() -> list[str]:
+    builder = load_dataset_builder("whirlwind-ams/hslvision")
+    cat_feat = builder.info.features["objects"]["category"]
+    if hasattr(cat_feat, "feature") and hasattr(cat_feat.feature, "names"):
+        return cat_feat.feature.names
+    if hasattr(cat_feat, "names"):
+        return cat_feat.names
+    return []
 
 
 if __name__ == "__main__":
