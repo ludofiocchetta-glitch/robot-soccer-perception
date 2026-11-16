@@ -8,7 +8,7 @@ def load_split(
     img_size: tuple[int, int] = (32, 32),
     margin_ratio: float = 0.05,
     streaming: bool = True
-):
+) -> tuple[np.ndarray, np.ndarray]:
     """
     load a split and return (x, y) for classification
     """
