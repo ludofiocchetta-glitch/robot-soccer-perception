@@ -17,16 +17,6 @@ from dataset import load_split, get_class_names
 from features import prepare_features
 from model import get_models
 
-CLASS_NAMES = [
-    "Ball",
-    "Goalpost",
-    "Robot",
-    "L-Intersections",
-    "Penality Marks",
-    "T-Intersections",
-    "X-Intersections"
-]  
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="train and evaluate linear classifiers")
     parser.add_argument(
@@ -64,7 +54,7 @@ def parse_args() -> argparse.Namespace:
         "--output_dir",
         type=str,
         default="results",
-        help="output directory for atrics and graphs"
+        help="output directory for matrics and graphs"
     )
 
     return parser.parse_args()
@@ -125,6 +115,7 @@ def main():
 
         y_pred = clf.predict(x_val)
         acc = accuracy_score(y_val, y_pred)
+        train_acc = accuracy_score(y_train, clf.predict(x_train))
         macro_f1 = f1_score(y_val, y_pred, average="macro", zero_division=0)
         report = classification_report(
             y_val, y_pred, target_names=target_names, output_dict=True, zero_division=0
@@ -132,13 +123,14 @@ def main():
 
         results[name] = {
             "accuracy": round(float(acc), 4),
+            "train_accuracy": round(float(train_acc), 4),
             "macro_f1": round(float(macro_f1), 4),
             "train_time_sec": round(float(train_time), 3),
-            "per_class": report,
+            "for_class": report,
         }
 
         print(f"\n{name}")
-        print(f"accuracy: {acc:.4f} | F1: {macro_f1:.4f} | time: {train_time:.2f}s")
+        print(f"accuracy: {acc:.4f} | train acc: {train_acc:.4f} | F1: {macro_f1:.4f} | time: {train_time:.2f}s")
         print(classification_report(y_val, y_pred, target_names=target_names, zero_division=0))
 
         save_confusion_matrix(
