@@ -56,6 +56,13 @@ def parse_args() -> argparse.Namespace:
         default="results",
         help="output directory for matrics and graphs"
     )
+    parser.add_argument(
+        "--eval_split",
+        type=str,
+        default="valid",
+        choices=["valid", "test"],
+        help="split used for evaluation: valid for tuning, test for final evaluation"
+    )
 
     return parser.parse_args()
 
@@ -79,7 +86,7 @@ def save_confusion_matrix(
 
 def main():
     args = parse_args()
-    out_dir = Path(args.output_dir) / args.feature_type
+    out_dir = Path(args.output_dir) / args.eval_split / args.feature_type
     out_dir.mkdir(parents=True, exist_ok=True)
 
     max_train = 150 if args.debug else None
@@ -88,7 +95,7 @@ def main():
 
     print(f"loading dataset (debug={args.debug})")
     x_train_crops, y_train = load_split(split_name="train", max_samples=max_train, streaming=args.debug)
-    x_val_crops, y_val = load_split(split_name="valid", max_samples=max_val, streaming=args.debug)
+    x_val_crops, y_val = load_split(split_name=args.eval_split, max_samples=max_val, streaming=args.debug)
     print(f"train crops: {len(y_train)} | val crops: {len(y_val)}")
 
     print(f"features extraction ({args.feature_type})")
@@ -97,6 +104,10 @@ def main():
 
     print("evaluation of the models")
     models = get_models(ls_lambda=args.ls_lambda, svm_c=args.svm_c, class_weight=cw)
+    if args.feature_type == "pixels":
+        # pop the slow models
+        for slow_model in ["LinearSVC", "Bagging", "Boosting"]:
+            models.pop(slow_model, None)
     results = {}
 
     class_names = get_class_names()
@@ -141,39 +152,40 @@ def main():
             save_path=out_dir / f"cm_{name.lower()}.png"
         )
 
-    cnn_epochs = 2 if args.debug else 15
-    cnn = SimpleCNN(epochs=cnn_epochs, batch_size=128, lr=1e-3, class_weight=cw)
-    t0 = time.perf_counter()
-    cnn.fit(x_train_crops, y_train)
-    train_time = time.perf_counter() - t0
-    train_acc = accuracy_score(y_train, cnn.predict(x_train_crops))
-    y_pred = cnn.predict(x_val_crops)
+    if args.feature_type == "color":
+        cnn_epochs = 2 if args.debug else 15
+        cnn = SimpleCNN(epochs=cnn_epochs, batch_size=128, lr=1e-3, class_weight=cw)
+        t0 = time.perf_counter()
+        cnn.fit(x_train_crops, y_train)
+        train_time = time.perf_counter() - t0
+        train_acc = accuracy_score(y_train, cnn.predict(x_train_crops))
+        y_pred = cnn.predict(x_val_crops)
 
-    acc = accuracy_score(y_val, y_pred)
-    macro_f1 = f1_score(y_val, y_pred, average="macro", zero_division=0)
-    report = classification_report(
-        y_val, y_pred, labels=present_classes, target_names=target_names, output_dict=True, zero_division=0
-    )
+        acc = accuracy_score(y_val, y_pred)
+        macro_f1 = f1_score(y_val, y_pred, average="macro", zero_division=0)
+        report = classification_report(
+            y_val, y_pred, labels=present_classes, target_names=target_names, output_dict=True, zero_division=0
+        )
 
-    results["SimpleCNN"] = {
-        "accuracy": round(float(acc), 4),
-        "train_accuracy": round(float(train_acc), 4),
-        "macro_f1": round(float(macro_f1), 4),
-        "train_time_sec": round(float(train_time), 3),
-        "for_class": report
-    }
+        results["SimpleCNN"] = {
+            "accuracy": round(float(acc), 4),
+            "train_accuracy": round(float(train_acc), 4),
+            "macro_f1": round(float(macro_f1), 4),
+            "train_time_sec": round(float(train_time), 3),
+            "for_class": report
+        }
 
-    print("\nSimpleCNN")
-    print(f"accuracy: {acc:.4f} | train acc: {train_acc:.4f} | F1: {macro_f1:.4f} | time: {train_time:.2f}s")
-    print(classification_report(y_val, y_pred, labels=present_classes, target_names=target_names, zero_division=0))
+        print("\nSimpleCNN")
+        print(f"accuracy: {acc:.4f} | train acc: {train_acc:.4f} | F1: {macro_f1:.4f} | time: {train_time:.2f}s")
+        print(classification_report(y_val, y_pred, labels=present_classes, target_names=target_names, zero_division=0))
 
-    save_confusion_matrix(
-        y_val,
-        y_pred,
-        labels=target_names,
-        title="SimpleCNN (raw_crops) - normalized CM",
-        save_path=out_dir / "cm_simplecnn.png"
-    )
+        save_confusion_matrix(
+            y_val,
+            y_pred,
+            labels=target_names,
+            title="SimpleCNN (raw_crops) - normalized CM",
+            save_path=out_dir / "cm_simplecnn.png"
+        )
 
     print(f"saving results in {out_dir / 'metrics.json'}...")
     with open(out_dir / "metrics.json", "w", encoding="utf-8") as f:

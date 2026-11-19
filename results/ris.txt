@@ -1,0 +1,197 @@
+train crops: 45519 | val crops: 9925
+features extraction (color)
+shape x_train: (45519, 336) | x_val: (9925, 336)
+evaluation of the models
+
+LeastSquare
+accuracy: 0.8300 | train acc: 0.8407 | F1: 0.8244 | time: 0.13s
+                 precision    recall  f1-score   support
+
+           Ball       0.95      0.76      0.84       513
+       Goalpost       0.93      0.90      0.92      1071
+             K1       0.88      0.98      0.93      2272
+L-Intersections       0.78      0.80      0.79      2737
+  Penalty Marks       0.94      0.67      0.78       600
+T-Intersections       0.73      0.78      0.76      1965
+X-Intersections       0.85      0.68      0.75       767
+
+       accuracy                           0.83      9925
+      macro avg       0.87      0.80      0.82      9925
+   weighted avg       0.83      0.83      0.83      9925
+
+
+BasePerceptron
+accuracy: 0.8241 | train acc: 0.8384 | F1: 0.8254 | time: 18.84s
+                 precision    recall  f1-score   support
+
+           Ball       0.89      0.85      0.87       513
+       Goalpost       0.92      0.95      0.93      1071
+             K1       0.94      0.95      0.95      2272
+L-Intersections       0.76      0.79      0.77      2737
+  Penalty Marks       0.86      0.87      0.87       600
+T-Intersections       0.72      0.73      0.73      1965
+X-Intersections       0.76      0.59      0.66       767
+
+       accuracy                           0.82      9925
+      macro avg       0.84      0.82      0.83      9925
+   weighted avg       0.82      0.82      0.82      9925
+
+
+LDA
+accuracy: 0.8654 | train acc: 0.8701 | F1: 0.8715 | time: 1.60s
+                 precision    recall  f1-score   support
+
+           Ball       0.95      0.87      0.91       513
+       Goalpost       0.96      0.92      0.94      1071
+             K1       0.93      0.98      0.96      2272
+L-Intersections       0.83      0.82      0.83      2737
+  Penalty Marks       0.93      0.83      0.88       600
+T-Intersections       0.77      0.80      0.78      1965
+X-Intersections       0.82      0.80      0.81       767
+
+       accuracy                           0.87      9925
+      macro avg       0.88      0.86      0.87      9925
+   weighted avg       0.87      0.87      0.87      9925
+
+
+LinearSVC
+accuracy: 0.8729 | train acc: 0.8832 | F1: 0.8757 | time: 37.28s
+                 precision    recall  f1-score   support
+
+           Ball       0.88      0.92      0.90       513
+       Goalpost       0.94      0.97      0.95      1071
+             K1       0.96      0.96      0.96      2272
+L-Intersections       0.88      0.79      0.83      2737
+  Penalty Marks       0.84      0.93      0.88       600
+T-Intersections       0.80      0.80      0.80      1965
+X-Intersections       0.75      0.87      0.80       767
+
+       accuracy                           0.87      9925
+      macro avg       0.86      0.89      0.88      9925
+   weighted avg       0.87      0.87      0.87      9925
+
+
+KNN
+accuracy: 0.9684 | train acc: 0.9998 | F1: 0.9679 | time: 0.01s
+                 precision    recall  f1-score   support
+
+           Ball       1.00      0.88      0.94       513
+       Goalpost       0.99      0.97      0.98      1071
+             K1       0.93      1.00      0.96      2272
+L-Intersections       0.98      0.96      0.97      2737
+  Penalty Marks       0.99      0.97      0.98       600
+T-Intersections       0.97      0.96      0.97      1965
+X-Intersections       0.98      0.98      0.98       767
+
+       accuracy                           0.97      9925
+      macro avg       0.98      0.96      0.97      9925
+   weighted avg       0.97      0.97      0.97      9925
+
+
+Bagging
+accuracy: 0.9528 | train acc: 0.9998 | F1: 0.9514 | time: 206.44s
+                 precision    recall  f1-score   support
+
+           Ball       1.00      0.85      0.92       513
+       Goalpost       0.98      0.97      0.98      1071
+             K1       0.95      0.99      0.97      2272
+L-Intersections       0.92      0.96      0.94      2737
+  Penalty Marks       0.99      0.92      0.96       600
+T-Intersections       0.95      0.93      0.94      1965
+X-Intersections       0.99      0.92      0.95       767
+
+       accuracy                           0.95      9925
+      macro avg       0.97      0.94      0.95      9925
+   weighted avg       0.95      0.95      0.95      9925
+
+
+Boosting
+accuracy: 0.9717 | train acc: 0.9972 | F1: 0.9713 | time: 146.68s
+                 precision    recall  f1-score   support
+
+           Ball       0.99      0.94      0.97       513
+       Goalpost       0.99      0.99      0.99      1071
+             K1       0.99      0.99      0.99      2272
+L-Intersections       0.97      0.96      0.96      2737
+  Penalty Marks       0.97      0.97      0.97       600
+T-Intersections       0.95      0.97      0.96      1965
+X-Intersections       0.97      0.96      0.97       767
+
+       accuracy                           0.97      9925
+      macro avg       0.97      0.97      0.97      9925
+   weighted avg       0.97      0.97      0.97      9925
+
+
+SimpleCNN
+accuracy: 0.9788 | train acc: 0.9921 | F1: 0.9776 | time: 46.46s
+                 precision    recall  f1-score   support
+
+           Ball       0.98      0.98      0.98       513
+       Goalpost       0.99      0.98      0.99      1071
+             K1       0.99      1.00      0.99      2272
+L-Intersections       0.98      0.97      0.98      2737
+  Penalty Marks       0.93      0.99      0.96       600
+T-Intersections       0.98      0.97      0.97      1965
+X-Intersections       0.99      0.97      0.98       767
+
+       accuracy                           0.98      9925
+      macro avg       0.98      0.98      0.98      9925
+   weighted avg       0.98      0.98      0.98      9925
+
+saving results in results/color/metrics.json...
+loading dataset (debug=False)
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+train crops: 45519 | val crops: 9925
+features extraction (pixels)
+shape x_train: (45519, 3072) | x_val: (9925, 3072)
+evaluation of the models
+
+LeastSquare
+accuracy: 0.7577 | train acc: 0.7802 | F1: 0.7230 | time: 7.59s
+                 precision    recall  f1-score   support
+
+           Ball       0.94      0.82      0.87       513
+       Goalpost       0.96      0.90      0.93      1071
+             K1       0.91      0.97      0.94      2272
+L-Intersections       0.61      0.81      0.70      2737
+  Penalty Marks       0.72      0.22      0.34       600
+T-Intersections       0.68      0.59      0.64      1965
+X-Intersections       0.83      0.53      0.65       767
+
+       accuracy                           0.76      9925
+      macro avg       0.81      0.69      0.72      9925
+   weighted avg       0.77      0.76      0.75      9925
+
+
+BasePerceptron
+accuracy: 0.7392 | train acc: 0.7533 | F1: 0.7341 | time: 66.00s
+                 precision    recall  f1-score   support
+
+           Ball       0.86      0.89      0.88       513
+       Goalpost       0.96      0.89      0.92      1071
+             K1       0.90      0.97      0.93      2272
+L-Intersections       0.68      0.61      0.64      2737
+  Penalty Marks       0.68      0.49      0.57       600
+T-Intersections       0.63      0.62      0.63      1965
+X-Intersections       0.47      0.69      0.56       767
+
+       accuracy                           0.74      9925
+      macro avg       0.74      0.74      0.73      9925
+   weighted avg       0.74      0.74      0.74      9925
+
+
+LDA
+accuracy: 0.7860 | train acc: 0.8171 | F1: 0.7842 | time: 74.38s
+                 precision    recall  f1-score   support
+
+           Ball       0.96      0.81      0.88       513
+       Goalpost       0.97      0.88      0.92      1071
+             K1       0.97      0.95      0.96      2272
+L-Intersections       0.66      0.79      0.72      2737
+  Penalty Marks       0.71      0.62      0.66       600
+T-Intersections       0.68      0.64      0.66      1965
+X-Intersections       0.77      0.62      0.68       767
+
+       accuracy                           0.79      9925
+      macro avg       0.82      0.76      0.78      9925
+   weighted avg       0.79      0.79      0.79      9925
