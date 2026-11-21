@@ -47,8 +47,7 @@ class LeastSquare:
         return self.classes[np.argmax(scores, axis=1)]
 
 
-def get_models( ls_lambda: float = 10.0, svm_c: float = 1.0,
-    class_weight: str | None = "balanced") -> dict:
+def get_models( ls_lambda: float = 10.0, class_weight: str | None = "balanced") -> dict:
     return {
         "LeastSquare": LeastSquare(ls_lambda=ls_lambda),
         "KNN": KNeighborsClassifier(

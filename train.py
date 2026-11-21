@@ -78,7 +78,7 @@ def main():
 
     max_train = 150 if args.debug else None
     max_val = 50 if args.debug else None
-    cw = None if args.class_weight == "none" else args.class_weight
+    cw = "balanced"
 
     print(f"loading dataset (debug={args.debug})")
     x_train_crops, y_train = load_split(split_name="train", max_samples=max_train, streaming=args.debug)
@@ -90,7 +90,7 @@ def main():
     print(f"shape x_train: {x_train.shape} | x_val: {x_val.shape}")
 
     print("evaluation of the models")
-    models = get_models(ls_lambda=args.ls_lambda, svm_c=args.svm_c, class_weight=cw)
+    models = get_models(ls_lambda=args.ls_lambda, class_weight=cw)
     if args.feature_type == "pixels":
         # pop the slow models
         for slow_model in ["Boosting"]:
