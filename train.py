@@ -30,7 +30,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ls_lambda",
         type=float,
-        default=10.0,
+        default=100.0,
         help="regolarization parameter for LeastSquare"
     )
     parser.add_argument(
