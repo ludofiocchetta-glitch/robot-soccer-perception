@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -180,3 +182,28 @@ class MyCNN:
         pred_idx = np.concatenate(preds, axis=0)
         # reconverts to the main class
         return self.classes[pred_idx]
+
+    def save(self, path: str | Path) -> None:
+        if self.net is None or self.classes is None:
+            raise RuntimeError("call fit() before save()")
+        torch.save(
+            {
+                "state_dict": self.net.state_dict(),
+                "classes": self.classes,
+                "mean": self.mean,
+                "std": self.std,
+            },
+            path
+        )
+
+    @classmethod
+    def load(cls, path: str | Path) -> "MyCNN":
+        checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+        obj = cls()
+        obj.classes = checkpoint["classes"]
+        obj.mean = checkpoint["mean"]
+        obj.std = checkpoint["std"]
+        obj.net = obj._build_net(len(obj.classes)).to(obj.device)
+        obj.net.load_state_dict(checkpoint["state_dict"])
+        obj.net.eval()
+        return obj

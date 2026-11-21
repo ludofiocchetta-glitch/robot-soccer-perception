@@ -12,6 +12,7 @@ from sklearn.metrics import (
     confusion_matrix,
     f1_score
 )
+import torch
 
 from dataset import load_split, get_class_names
 from features import prepare_features
@@ -46,8 +47,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--eval_split",
         type=str,
-        default="valid",
-        choices=["valid", "test"],
+        default="both",
+        choices=["valid", "test", "both"],
         help="split used for evaluation: valid for tuning, test for final evaluation"
     )
 
@@ -69,76 +70,102 @@ def save_confusion_matrix(
     plt.savefig(save_path)
     plt.close(fig)
 
+def get_target_names(y_true: np.ndarray, y_pred: np.ndarray, class_names: list[str]) -> tuple[np.ndarray, list[str]]:
+    present_classes = np.unique(np.concatenate([y_true, y_pred]))
+    target_names = [
+        class_names[i] if 0 <= i < len(class_names) else f"class_{i}"
+        for i in present_classes
+    ]
+    return present_classes, target_names
 
 
 def main():
     args = parse_args()
-    out_dir = Path(args.output_dir) / args.eval_split / args.feature_type
-    out_dir.mkdir(parents=True, exist_ok=True)
+    base_out = Path(args.output_dir) 
+    base_out.mkdir(parents=True, exist_ok=True)
 
     max_train = 150 if args.debug else None
     max_val = 50 if args.debug else None
     cw = "balanced"
 
+    splits_to_eval = ["valid", "test"] if args.eval_split == "both" else [args.eval_split]
+
+    # loading dataset
     print(f"loading dataset (debug={args.debug})")
     x_train_crops, y_train = load_split(split_name="train", max_samples=max_train, streaming=args.debug)
-    x_val_crops, y_val = load_split(split_name=args.eval_split, max_samples=max_val, streaming=args.debug)
-    print(f"train crops: {len(y_train)} | val crops: {len(y_val)}")
+    eval_data = {}
+    for sp in splits_to_eval:
+        eval_data[sp] = load_split(split_name=sp, max_samples=max_val, streaming=args.debug)
 
+    # feature extraction
     print(f"features extraction ({args.feature_type})")
-    x_train, x_val, _ = prepare_features(x_train_crops, x_val_crops, mode=args.feature_type)
-    print(f"shape x_train: {x_train.shape} | x_val: {x_val.shape}")
+    first_sp = splits_to_eval[0]
+    x_train, first_x_eval, scaler = prepare_features(
+        x_train_crops, eval_data[first_sp][0], mode=args.feature_type
+    )
+    eval_features = {first_sp: (first_x_eval, eval_data[first_sp][1], eval_data[first_sp][0])}
 
-    print("evaluation of the models")
+    if len(splits_to_eval) > 1:
+        from features import extract_color_features, extract_pixels
+        second_sp = splits_to_eval[1]
+        raw_second = (
+            extract_color_features(eval_data[second_sp][0])
+            if args.feature_type == "color"
+            else extract_pixels(eval_data[second_sp][0])
+        )
+        eval_features[second_sp] = (
+            scaler.transform(raw_second),
+            eval_data[second_sp][1],
+            eval_data[second_sp][0],
+        )
+    # prepare result containers for split
+    results_by_split = {sp: {} for sp in splits_to_eval}
+    class_names = get_class_names()
+    # train classical models once and evaluate on each requested split
+    print("\ntraining and evaluating classical models...")
     models = get_models(ls_lambda=args.ls_lambda, class_weight=cw)
     if args.feature_type == "pixels":
-        # pop the slow models
-        for slow_model in ["Boosting"]:
-            models.pop(slow_model, None)
-    results = {}
-
-    class_names = get_class_names()
-    present_classes = np.unique(np.concatenate([y_train, y_val]))
-    target_names=[]
-    for i in present_classes:
-        if 0 <= i < len(class_names):
-            target_names.append(class_names[i])
-        else:
-            target_names.append(f"class_{i}")
+        models.pop("Boosting", None)
 
     for name, clf in models.items():
         t0 = time.perf_counter()
         clf.fit(x_train, y_train)
         train_time = time.perf_counter() - t0
-
-        y_pred = clf.predict(x_val)
-        acc = accuracy_score(y_val, y_pred)
         train_acc = accuracy_score(y_train, clf.predict(x_train))
-        macro_f1 = f1_score(y_val, y_pred, average="macro", zero_division=0)
-        report = classification_report(
-            y_val, y_pred, target_names=target_names, output_dict=True, zero_division=0
-        )
 
-        results[name] = {
-            "accuracy": round(float(acc), 4),
-            "train_accuracy": round(float(train_acc), 4),
-            "macro_f1": round(float(macro_f1), 4),
-            "train_time_sec": round(float(train_time), 3),
-            "for_class": report
-        }
+        for sp, (x_ev, y_ev, _) in eval_features.items():
+            out_dir = base_out / sp / args.feature_type
+            out_dir.mkdir(parents=True, exist_ok=True)
 
-        print(f"\n{name}")
-        print(f"accuracy: {acc:.4f} | train acc: {train_acc:.4f} | F1: {macro_f1:.4f} | time: {train_time:.2f}s")
-        print(classification_report(y_val, y_pred, target_names=target_names, zero_division=0))
+            y_pred = clf.predict(x_ev)
+            acc = accuracy_score(y_ev, y_pred)
+            macro_f1 = f1_score(y_ev, y_pred, average="macro", zero_division=0)
+            present_classes, target_names = get_target_names(y_ev, y_pred, class_names)
+            report = classification_report(
+                y_ev, y_pred, labels=present_classes, target_names=target_names, output_dict=True, zero_division=0
+            )
 
-        save_confusion_matrix(
-            y_val,
-            y_pred,
-            labels=target_names,
-            title=f"{name} ({args.feature_type}) - normalized CM",
-            save_path=out_dir / f"cm_{name.lower()}.png"
-        )
+            results_by_split[sp][name] = {
+                "accuracy": round(float(acc), 4),
+                "train_accuracy": round(float(train_acc), 4),
+                "macro_f1": round(float(macro_f1), 4),
+                "train_time_sec": round(float(train_time), 3),
+                "for_class": report
+            }
 
+            print(f"\n[{sp.upper()}] {name}")
+            print(f"accuracy: {acc:.4f} | train acc: {train_acc:.4f} | F1: {macro_f1:.4f} | time: {train_time:.2f}s")
+            print(classification_report(y_ev, y_pred, labels=present_classes, target_names=target_names, zero_division=0))
+
+            save_confusion_matrix(
+                y_ev,
+                y_pred,
+                labels=target_names,
+                title=f"{name} ({args.feature_type} - {sp}) - normalized CM",
+                save_path=out_dir / f"cm_{name.lower()}.png"
+            )
+
+    # train MyCNN once on raw 32x32x3 crops (gated on 'color' run to avoid duplicate training)
     if args.feature_type == "color":
         cnn_epochs = 2 if args.debug else 15
         cnn = MyCNN(epochs=cnn_epochs, batch_size=128, lr=1e-3, class_weight=cw)
@@ -146,37 +173,58 @@ def main():
         cnn.fit(x_train_crops, y_train)
         train_time = time.perf_counter() - t0
         train_acc = accuracy_score(y_train, cnn.predict(x_train_crops))
-        y_pred = cnn.predict(x_val_crops)
 
-        acc = accuracy_score(y_val, y_pred)
-        macro_f1 = f1_score(y_val, y_pred, average="macro", zero_division=0)
-        report = classification_report(
-            y_val, y_pred, labels=present_classes, target_names=target_names, output_dict=True, zero_division=0
+        # save checkpoint for T2 evaluation
+        ckpt_path = base_out / "mycnn_best.pt"
+        torch.save(
+            {
+                "state_dict": cnn.net.state_dict(),
+                "classes": cnn.classes,
+                "mean": cnn.mean,
+                "std": cnn.std
+            },
+            ckpt_path
         )
+        print(f"\nsaved MyCNN weights to {ckpt_path}")
 
-        results["MyCNN"] = {
-            "accuracy": round(float(acc), 4),
-            "train_accuracy": round(float(train_acc), 4),
-            "macro_f1": round(float(macro_f1), 4),
-            "train_time_sec": round(float(train_time), 3),
-            "for_class": report
-        }
+        for sp, (_, y_ev, x_ev_crops) in eval_features.items():
+            out_dir = base_out / sp / args.feature_type
+            out_dir.mkdir(parents=True, exist_ok=True)
 
-        print("\nMyCNN")
-        print(f"accuracy: {acc:.4f} | train acc: {train_acc:.4f} | F1: {macro_f1:.4f} | time: {train_time:.2f}s")
-        print(classification_report(y_val, y_pred, labels=present_classes, target_names=target_names, zero_division=0))
+            y_pred = cnn.predict(x_ev_crops)
+            acc = accuracy_score(y_ev, y_pred)
+            macro_f1 = f1_score(y_ev, y_pred, average="macro", zero_division=0)
+            present_classes, target_names = get_target_names(y_ev, y_pred, class_names)
+            report = classification_report(
+                y_ev, y_pred, labels=present_classes, target_names=target_names, output_dict=True, zero_division=0
+            )
 
-        save_confusion_matrix(
-            y_val,
-            y_pred,
-            labels=target_names,
-            title="MyCNN (raw_crops) - normalized CM",
-            save_path=out_dir / "cm_mycnn.png"
-        )
+            results_by_split[sp]["MyCNN"] = {
+                "accuracy": round(float(acc), 4),
+                "train_accuracy": round(float(train_acc), 4),
+                "macro_f1": round(float(macro_f1), 4),
+                "train_time_sec": round(float(train_time), 3),
+                "for_class": report
+            }
 
-    print(f"saving results in {out_dir / 'metrics.json'}...")
-    with open(out_dir / "metrics.json", "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2)
+            print(f"\n[{sp.upper()}] MyCNN")
+            print(f"accuracy: {acc:.4f} | train acc: {train_acc:.4f} | F1: {macro_f1:.4f} | time: {train_time:.2f}s")
+            print(classification_report(y_ev, y_pred, labels=present_classes, target_names=target_names, zero_division=0))
+
+            save_confusion_matrix(
+                y_ev,
+                y_pred,
+                labels=target_names,
+                title=f"MyCNN (raw_crops - {sp}) - normalized CM",
+                save_path=out_dir / "cm_mycnn.png"
+            )
+
+    # save JSON metrics separately for split
+    for sp, sp_results in results_by_split.items():
+        json_path = base_out / sp / args.feature_type / "metrics.json"
+        print(f"Saving results in {json_path}...")
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(sp_results, f, indent=2)
 
 
 if __name__ == "__main__":
