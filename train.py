@@ -10,12 +10,12 @@ from sklearn.metrics import (
     accuracy_score,
     classification_report,
     confusion_matrix,
-    f1_score,
+    f1_score
 )
 
 from dataset import load_split, get_class_names
 from features import prepare_features
-from model import SimpleCNN, get_models
+from model import MyCNN, get_models
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="train and evaluate linear classifiers")
@@ -31,19 +31,6 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=10.0,
         help="regolarization parameter for LeastSquare"
-    )
-    parser.add_argument(
-        "--svm_c",
-        type=float,
-        default=1.0,
-        help="regolarization parameter C per LinearSVC"
-    )
-    parser.add_argument(
-        "--class_weight",
-        type=str,
-        default="balanced",
-        choices=["balanced", "none"],
-        help="balance weights for Perceptron and LinearSVC"
     )
     parser.add_argument(
         "--debug",
@@ -106,7 +93,7 @@ def main():
     models = get_models(ls_lambda=args.ls_lambda, svm_c=args.svm_c, class_weight=cw)
     if args.feature_type == "pixels":
         # pop the slow models
-        for slow_model in ["LinearSVC", "Bagging", "Boosting"]:
+        for slow_model in ["Boosting"]:
             models.pop(slow_model, None)
     results = {}
 
@@ -154,7 +141,7 @@ def main():
 
     if args.feature_type == "color":
         cnn_epochs = 2 if args.debug else 15
-        cnn = SimpleCNN(epochs=cnn_epochs, batch_size=128, lr=1e-3, class_weight=cw)
+        cnn = MyCNN(epochs=cnn_epochs, batch_size=128, lr=1e-3, class_weight=cw)
         t0 = time.perf_counter()
         cnn.fit(x_train_crops, y_train)
         train_time = time.perf_counter() - t0
@@ -167,7 +154,7 @@ def main():
             y_val, y_pred, labels=present_classes, target_names=target_names, output_dict=True, zero_division=0
         )
 
-        results["SimpleCNN"] = {
+        results["MyCNN"] = {
             "accuracy": round(float(acc), 4),
             "train_accuracy": round(float(train_acc), 4),
             "macro_f1": round(float(macro_f1), 4),
@@ -175,7 +162,7 @@ def main():
             "for_class": report
         }
 
-        print("\nSimpleCNN")
+        print("\nMyCNN")
         print(f"accuracy: {acc:.4f} | train acc: {train_acc:.4f} | F1: {macro_f1:.4f} | time: {train_time:.2f}s")
         print(classification_report(y_val, y_pred, labels=present_classes, target_names=target_names, zero_division=0))
 
@@ -183,8 +170,8 @@ def main():
             y_val,
             y_pred,
             labels=target_names,
-            title="SimpleCNN (raw_crops) - normalized CM",
-            save_path=out_dir / "cm_simplecnn.png"
+            title="MyCNN (raw_crops) - normalized CM",
+            save_path=out_dir / "cm_mycnn.png"
         )
 
     print(f"saving results in {out_dir / 'metrics.json'}...")
