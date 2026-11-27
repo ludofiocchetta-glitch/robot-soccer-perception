@@ -157,15 +157,15 @@ def main() -> None:
     print(f"loading train and valid regression splits (debug={args.debug})...")
     train_patches, train_cls, y_train, _, _ = load_regression_split(
         split="train",
+        patch_size=32,
         samples_per_box=args.samples_per_box,
-        max_images=max_train,
-        patch_size=32
+        debug=args.debug
     )
     val_patches, val_cls, y_val, val_crop_boxes, val_gt_boxes = load_regression_split(
         split="valid",
+        patch_size=32,
         samples_per_box=1,
-        max_images=max_val,
-        patch_size=32
+        debug=args.debug
     )
     print(f"train samples: {len(y_train)} | valid samples: {len(y_val)}")
 
