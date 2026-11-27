@@ -14,9 +14,9 @@ from sklearn.metrics import (
 )
 import torch
 
-from dataset import load_split, get_class_names
+from classification_dataset import load_split, get_class_names
 from features import prepare_features
-from model import MyCNN, get_models
+from classification_model import MyCNN, get_models
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="train and evaluate linear classifiers")

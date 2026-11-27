@@ -9,9 +9,9 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.neighbors import KNeighborsClassifier
 
-from dataset import load_split
+from classification_dataset import load_split
 from features import prepare_features
-from model import LeastSquare, MyCNN
+from classification_model import LeastSquare, MyCNN
 
 
 def parse_args() -> argparse.Namespace:
