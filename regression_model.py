@@ -183,10 +183,10 @@ class MyCNNRegressor:
 
 def get_regression_models(epochs: int = 15):
     return {
-        "LeastSquareReg": LeastSquareRegressor(ls_lambda=10.0),
-        "KNNReg": KNeighborsRegressor(n_neighbors=11, weights="distance", n_jobs=-1),
+        "LeastSquareReg": LeastSquareRegressor(ls_lambda=1.0),
+        "KNNReg": KNeighborsRegressor(n_neighbors=5, weights="distance", n_jobs=-1),
         "BoostingReg": MultiOutputRegressor(
-            HistGradientBoostingRegressor(max_iter=200, learning_rate=0.1, random_state=42)
+            HistGradientBoostingRegressor(max_iter=200, learning_rate=0.2, random_state=42)
         ),
-        "MyCNNReg": MyCNNRegressor(lr=1e-3, epochs=epochs, batch_size=128)
+        "MyCNNReg": MyCNNRegressor(lr=1e-4, epochs=epochs, batch_size=128)
     }
