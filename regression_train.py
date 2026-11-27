@@ -12,7 +12,7 @@ from regression_dataset import (
     load_regression_split,
     one_hot_classes,
     decode_boxes,
-    compute_iou,
+    compute_iou
 )
 from regression_model import get_regression_models
 
@@ -21,7 +21,7 @@ def evaluate_predictions(
     preds: np.ndarray,
     targets: np.ndarray,
     crop_boxes: np.ndarray,
-    gt_boxes: np.ndarray,
+    gt_boxes: np.ndarray
 ):
     pred_boxes = decode_boxes(preds, crop_boxes)
     ious = compute_iou(pred_boxes, gt_boxes)
@@ -31,7 +31,7 @@ def evaluate_predictions(
     return {
         "iou": float(np.mean(ious)),
         "mse": mse,
-        "mae": mae,
+        "mae": mae
     }
 
 
@@ -84,7 +84,7 @@ def main():
     summary = {
         "initial_window": {
             "valid": init_val,
-            "test": init_test,
+            "test": init_test
         }
     }
 
@@ -107,7 +107,7 @@ def main():
         summary[name] = {
             "train_time_s": round(elapsed, 2),
             "valid": val_metrics,
-            "test": test_metrics,
+            "test": test_metrics
         }
 
         print(
