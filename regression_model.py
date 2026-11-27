@@ -20,15 +20,22 @@ class LeastSquareRegressor:
     def fit(self, X: np.ndarray, Y: np.ndarray):
         N, D = X.shape
         Phi = np.hstack([np.ones((N, 1), dtype=np.float32), X])
-        reg = np.eye(D + 1, dtype=np.float32) * self.ls_lambda
-        reg[0, 0] = 0.0  # doesn't penalize the bias term
-        self.W = np.linalg.solve(Phi.T @ Phi + reg, Phi.T @ Y)[0]
+
+        if self.ls_lambda > 0:
+            reg = np.eye(D + 1, dtype=np.float32) * self.ls_lambda
+            reg[0, 0] = 0.0  # doesn't penalize the bias term
+            self.W = np.linalg.solve(Phi.T @ Phi + reg, Phi.T @ Y)
+        else:
+            # exact LS solution with pseudoinverse when lambda == 0
+            self.W = np.matmul(np.linalg.pinv(Phi), Y)
+
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        if self.W is None:
+            raise RuntimeError("call fit() before predict()")
         Phi = np.hstack([np.ones((X.shape[0], 1), dtype=np.float32), X])
         return (Phi @ self.W).astype(np.float32)
-
 
 def differentiable_iou_loss(preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     """Computes 1 - IoU directly in the normalized crop window space."""
