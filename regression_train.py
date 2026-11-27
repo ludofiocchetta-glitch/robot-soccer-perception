@@ -7,7 +7,7 @@ import torch
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 
-from features import extract_features
+from features import prepare_features, extract_color_features
 from regression_dataset import (
     load_regression_split,
     one_hot_classes,
@@ -40,7 +40,7 @@ def main():
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--samples_per_box", type=int, default=2, help="Crops sampled per box on train split")
     parser.add_argument("--epochs", type=int, default=15)
-    parser.add_argument("--out_dir", type=str, default="results_regression")
+    parser.add_argument("--out_dir", type=str, default="results")
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -67,14 +67,13 @@ def main():
     )
 
     print("2. Extracting 'color' features + class one-hot...")
-    C_train = one_hot_classes(train_cls, num_classes=7)
-    C_val = one_hot_classes(val_cls, num_classes=7)
-    C_test = one_hot_classes(test_cls, num_classes=7)
+    num_classes = int(max(train_cls.max(), val_cls.max(), test_cls.max())) + 1
+    C_train = one_hot_classes(train_cls, num_classes=num_classes)
+    C_val = one_hot_classes(val_cls, num_classes=num_classes)
+    C_test = one_hot_classes(test_cls, num_classes=num_classes)
 
-    scaler = StandardScaler()
-    X_train_color = scaler.fit_transform(extract_features(train_patches, feature_type="color"))
-    X_val_color = scaler.transform(extract_features(val_patches, feature_type="color"))
-    X_test_color = scaler.transform(extract_features(test_patches, feature_type="color"))
+    X_train_color, X_val_color, scaler = prepare_features(train_patches, val_patches, mode="color")
+    X_test_color = scaler.transform(extract_color_features(test_patches))
 
     X_train = np.hstack([X_train_color, C_train]).astype(np.float32)
     X_val = np.hstack([X_val_color, C_val]).astype(np.float32)
@@ -128,7 +127,7 @@ def main():
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
     x_pos = np.arange(len(labels))
 
-    axes[0].bar(x_pos, test_ious, width=0.5, color="#3f8bc1")
+    axes[0].bar(x_pos, test_ious, width=0.5, color="#185682")
     axes[0].set_xticks(x_pos)
     axes[0].set_xticklabels(labels, rotation=15)
     axes[0].set_ylim(0, 1.0)
@@ -136,7 +135,7 @@ def main():
     axes[0].set_title("Intersection over Union")
     axes[0].grid(axis="y", linestyle=":", alpha=0.6)
 
-    axes[1].bar(x_pos - 0.18, test_mses, width=0.35, label="MSE", color="#ff7f0e")
+    axes[1].bar(x_pos - 0.18, test_mses, width=0.35, label="MSE", color="#537c9b")
     axes[1].bar(x_pos + 0.18, test_maes, width=0.35, label="MAE", color="#202394")
     axes[1].set_xticks(x_pos)
     axes[1].set_xticklabels(labels, rotation=15)
