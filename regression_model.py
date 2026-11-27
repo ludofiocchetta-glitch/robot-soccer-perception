@@ -163,7 +163,7 @@ class MyCNNRegressor:
 
     def predict(self, X_patches: np.ndarray, X_cls: np.ndarray) -> np.ndarray:
         self.net.eval()
-        X_t = self._preprocess(X_patches, fit=False)
+        X_t = self.preprocess(X_patches, fit=False)
         C_t = torch.from_numpy(X_cls.astype(np.float32))
         loader = DataLoader(TensorDataset(X_t, C_t), batch_size=256, shuffle=False)
         preds = []
