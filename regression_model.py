@@ -22,7 +22,7 @@ class LeastSquareRegressor:
         Phi = np.hstack([np.ones((N, 1), dtype=np.float32), X])
         reg = np.eye(D + 1, dtype=np.float32) * self.ls_lambda
         reg[0, 0] = 0.0  # doesn't penalize the bias term
-        self.W = np.linalg.solve(Phi.T @ Phi + reg, Phi.T @ Y)
+        self.W = np.linalg.solve(Phi.T @ Phi + reg, Phi.T @ Y)[0]
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
