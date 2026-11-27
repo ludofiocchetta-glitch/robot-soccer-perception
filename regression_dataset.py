@@ -77,7 +77,7 @@ def decode_boxes(preds: np.ndarray, crop_boxes: np.ndarray) -> np.ndarray:
     return np.stack([pred_x, pred_y, pred_w, pred_h], axis=1).astype(np.float32)
 
 
-def _sample_jittered_box(
+def sample_jittered_box(
     gt_box: np.ndarray,
     img_w: int,
     img_h: int,
@@ -157,7 +157,7 @@ def load_regression_split(
             gt_box = np.array([x1, y1, gt_w, gt_h], dtype=np.float32)
 
             for _ in range(samples_per_box):
-                c_box = _sample_jittered_box(gt_box, img_w, img_h, rng)
+                c_box = sample_jittered_box(gt_box, img_w, img_h, rng)
                 cx1, cy1 = int(round(c_box[0])), int(round(c_box[1]))
                 cx2 = max(cx1 + 1, min(img_w, int(round(c_box[0] + c_box[2]))))
                 cy2 = max(cy1 + 1, min(img_h, int(round(c_box[1] + c_box[3]))))
