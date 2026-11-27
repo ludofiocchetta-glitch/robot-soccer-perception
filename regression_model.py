@@ -30,6 +30,31 @@ class LeastSquareRegressor:
         return (Phi @ self.W).astype(np.float32)
 
 
+def differentiable_iou_loss(preds: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+    """Computes 1 - IoU directly in the normalized crop window space."""
+    p_w = torch.exp(torch.clamp(preds[:, 2], -3.0, 3.0))
+    p_h = torch.exp(torch.clamp(preds[:, 3], -3.0, 3.0))
+    p_x1 = preds[:, 0] - 0.5 * p_w
+    p_y1 = preds[:, 1] - 0.5 * p_h
+    p_x2 = preds[:, 0] + 0.5 * p_w
+    p_y2 = preds[:, 1] + 0.5 * p_h
+
+    t_w = torch.exp(torch.clamp(targets[:, 2], -3.0, 3.0))
+    t_h = torch.exp(torch.clamp(targets[:, 3], -3.0, 3.0))
+    t_x1 = targets[:, 0] - 0.5 * t_w
+    t_y1 = targets[:, 1] - 0.5 * t_h
+    t_x2 = targets[:, 0] + 0.5 * t_w
+    t_y2 = targets[:, 1] + 0.5 * t_h
+
+    inter_w = torch.clamp(torch.min(p_x2, t_x2) - torch.max(p_x1, t_x1), min=0.0)
+    inter_h = torch.clamp(torch.min(p_y2, t_y2) - torch.max(p_y1, t_y1), min=0.0)
+    inter_area = inter_w * inter_h
+
+    union = p_w * p_h + t_w * t_h - inter_area + 1e-6
+    iou = inter_area / union
+    return (1.0 - iou).mean()
+
+
 class CNNRegNet(nn.Module):
     def __init__(self, num_classes: int = 7):
         super().__init__()
@@ -50,7 +75,6 @@ class CNNRegNet(nn.Module):
         self.regressor = nn.Sequential(
             nn.Linear(128 * 4 * 4 + num_classes, 128),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.2),
             nn.Linear(128, 4)
         )
 
@@ -61,7 +85,7 @@ class CNNRegNet(nn.Module):
 
 
 class MyCNNRegressor:
-    """CNN end-to-end on RGB 32x32 patch trained with Smooth L1 (Huber) Loss"""
+    """CNN end-to-end on RGB 32x32 patch trained with Smooth L1 + Differentiable IoU Loss"""
 
     def __init__(self, lr: float = 1e-3, epochs: int = 15, batch_size: int = 128, seed: int = 42):
         self.lr = lr
@@ -73,7 +97,7 @@ class MyCNNRegressor:
         self.std = None
         self.net = None
 
-    def _preprocess(self, patches: np.ndarray, fit: bool = False) -> torch.Tensor:
+    def preprocess(self, patches: np.ndarray, fit: bool = False) -> torch.Tensor:
         # (N, H, W, C) -> (N, C, H, W)
         x = np.transpose(patches, (0, 3, 1, 2)).astype(np.float32)
         if fit:
@@ -97,7 +121,7 @@ class MyCNNRegressor:
             torch.cuda.manual_seed_all(self.seed)
 
         self.net = CNNRegNet(num_classes=X_cls.shape[1]).to(self.device)
-        X_t = self._preprocess(X_patches, fit=True)
+        X_t = self.preprocess(X_patches, fit=True)
         C_t = torch.from_numpy(X_cls.astype(np.float32))
         Y_t = torch.from_numpy(Y.astype(np.float32))
 
@@ -115,7 +139,7 @@ class MyCNNRegressor:
                 bx, bc, by = bx.to(self.device), bc.to(self.device), by.to(self.device)
                 optimizer.zero_grad()
                 out = self.net(bx, bc)
-                loss = criterion(out, by)
+                loss = criterion(out, by) + 0.5 * differentiable_iou_loss(out, by)
                 loss.backward()
                 optimizer.step()
                 running_loss += loss.item() * bx.size(0)
